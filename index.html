@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zarif - Low-Level Programming & Reverse Engineering</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a0033 50%, #0f0f1e 100%);
+            color: #e0e0e0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(100, 200, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(200, 100, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(100, 255, 200, 0.1) 0%, transparent 50%);
+            animation: gradientShift 15s ease infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% {
+                background: 
+                    radial-gradient(circle at 20% 50%, rgba(100, 200, 255, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(200, 100, 255, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 20%, rgba(100, 255, 200, 0.1) 0%, transparent 50%);
+            }
+            50% {
+                background: 
+                    radial-gradient(circle at 80% 50%, rgba(100, 200, 255, 0.15) 0%, transparent 50%),
+                    radial-gradient(circle at 20% 80%, rgba(200, 100, 255, 0.15) 0%, transparent 50%),
+                    radial-gradient(circle at 60% 30%, rgba(100, 255, 200, 0.15) 0%, transparent 50%);
+            }
+        }
+
+        /* LED Text Effect */
+        .led-text {
+            text-shadow: 
+                0 0 10px rgba(100, 200, 255, 0.8),
+                0 0 20px rgba(100, 200, 255, 0.6),
+                0 0 30px rgba(100, 200, 255, 0.4),
+                0 0 40px rgba(100, 200, 255, 0.2);
+            animation: ledGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes ledGlow {
+            0%, 100% {
+                text-shadow: 
+                    0 0 10px rgba(100, 200, 255, 0.8),
+                    0 0 20px rgba(100, 200, 255, 0.6),
+                    0 0 30px rgba(100, 200, 255, 0.4),
+                    0 0 40px rgba(100, 200, 255, 0.2);
+            }
+            50% {
+                text-shadow: 
+                    0 0 20px rgba(100, 200, 255, 1),
+                    0 0 30px rgba(100, 200, 255, 0.8),
+                    0 0 40px rgba(100, 200, 255, 0.6),
+                    0 0 50px rgba(100, 200, 255, 0.3);
+            }
+        }
+
+        /* Container & Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 0;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(100, 200, 255, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #64c8ff, #c864ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        nav ul {
+            display: none;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        nav a {
+            color: #e0e0e0;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #64c8ff, #c864ff);
+            transition: width 0.3s ease;
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            animation: fadeInDown 1s ease;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #fff;
+            letter-spacing: -2px;
+        }
+
+        .hero .greeting {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #64c8ff, #c864ff, #64ffc8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            color: #64c8ff;
+            margin-bottom: 2rem;
+            animation: typeWriter 3s steps(60);
+        }
+
+        @keyframes typeWriter {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        .hero .motto {
+            font-size: 1.1rem;
+            color: #c864ff;
+            font-style: italic;
+            margin-bottom: 3rem;
+            opacity: 0.9;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .btn {
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #64c8ff, #0099ff);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 30px rgba(100, 200, 255, 0.8);
+        }
+
+        .btn-secondary {
+            border: 2px solid #64c8ff;
+            color: #64c8ff;
+            background: transparent;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(100, 200, 255, 0.1);
+            box-shadow: 0 0 20px rgba(100, 200, 255, 0.6);
+        }
+
+        /* Section Styles */
+        section {
+            margin: 4rem 0;
+            animation: fadeInUp 1s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #fff;
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #64c8ff, transparent);
+        }
+
+        /* About Section */
+        .about-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            margin-top: 3rem;
+            align-items: center;
+        }
+
+        .about-text ul {
+            list-style: none;
+        }
+
+        .about-text li {
+            padding: 1rem;
+            margin: 0.5rem 0;
+            background: rgba(100, 200, 255, 0.05);
+            border-left: 3px solid #64c8ff;
+            border-radius: 5px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .about-text li:hover {
+            background: rgba(100, 200, 255, 0.15);
+            transform: translateX(10px);
+        }
+
+        .about-icon-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .about-icon-item {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(200, 100, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(200, 100, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .about-icon-item:hover {
+            background: rgba(200, 100, 255, 0.15);
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(200, 100, 255, 0.3);
+        }
+
+        .about-icon-item i {
+            font-size: 2.5rem;
+            color: #c864ff;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* Skills Section */
+        .skills-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .skill-card {
+            background: linear-gradient(135deg, rgba(100, 200, 255, 0.1), rgba(200, 100, 255, 0.1));
+            padding: 2rem;
+            border-radius: 15px;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .skill-card:hover {
+            transform: translateY(-10px);
+            background: linear-gradient(135deg, rgba(100, 200, 255, 0.2), rgba(200, 100, 255, 0.2));
+            border: 1px solid rgba(100, 200, 255, 0.5);
+            box-shadow: 0 0 30px rgba(100, 200, 255, 0.3);
+        }
+
+        .skill-card h3 {
+            color: #64c8ff;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .skill-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+
+        .skill-item {
+            background: rgba(100, 200, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .skill-item:hover {
+            background: rgba(100, 200, 255, 0.3);
+            box-shadow: 0 0 10px rgba(100, 200, 255, 0.5);
+        }
+
+        /* Tools/Languages Grid */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .tool-item {
+            background: rgba(100, 200, 255, 0.05);
+            padding: 2rem 1rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid rgba(100, 200, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tool-item:hover {
+            background: rgba(100, 200, 255, 0.15);
+            transform: scale(1.1) rotateY(10deg);
+            border: 2px solid rgba(100, 200, 255, 0.6);
+            box-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
+        }
+
+        .tool-item i {
+            font-size: 2.5rem;
+            color: #64c8ff;
+            margin-bottom: 0.5rem;
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .tool-item:hover i {
+            color: #c864ff;
+            transform: rotateZ(360deg);
+            filter: drop-shadow(0 0 10px rgba(100, 200, 255, 0.8));
+        }
+
+        .tool-item p {
+            font-size: 0.9rem;
+            color: #e0e0e0;
+        }
+
+        /* Stats Section */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .stat-card {
+            background: rgba(100, 200, 255, 0.05);
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: rgba(100, 200, 255, 0.15);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(100, 200, 255, 0.3);
+        }
+
+        .stat-card img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        /* Connect Section */
+        .connect-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 3rem;
+        }
+
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(100, 200, 255, 0.1);
+            border: 2px solid rgba(100, 200, 255, 0.3);
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .social-link:hover {
+            background: linear-gradient(135deg, #64c8ff, #c864ff);
+            color: #0f0f1e;
+            transform: translateY(-10px) rotate(360deg);
+            box-shadow: 0 0 30px rgba(100, 200, 255, 0.6);
+            border: 2px solid transparent;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid rgba(100, 200, 255, 0.2);
+            margin-top: 4rem;
+            color: #888;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav ul {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1.2rem;
+            }
+
+            .about-content {
+                grid-template-columns: 1fr;
+            }
+
+            .tools-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+        /* Scroll Animation */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .scroll-reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.6s ease;
+        }
+
+        /* Loading Animation */
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation"></div>
+
+    <!-- Navigation -->
+    <nav class="container">
+        <div class="logo">
+            <i class="fas fa-briefcase"></i> Portfolio
+        </div>
+        <ul>
+            <li><a href="#about">About</a></li>
+            <li><a href="#skills">Skills</a></li>
+            <li><a href="#learning">Learning</a></li>
+            <li><a href="#connect">Connect</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero container">
+        <div class="greeting">👋 Hello there!</div>
+        <h1 class="led-text">I'm <span style="background: linear-gradient(135deg, #64c8ff, #c864ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Zarif</span></h1>
+        <p class="subtitle">Learning Low-Level Programming & Reverse Engineering</p>
+        <p class="motto">💪 Discipline is non-negotiable.</p>
+        <div class="cta-buttons">
+            <a href="#about" class="btn btn-primary">
+                <i class="fas fa-arrow-down" style="margin-right: 0.5rem;"></i>Explore My Journey
+            </a>
+            <a href="#connect" class="btn btn-secondary">
+                <i class="fas fa-envelope" style="margin-right: 0.5rem;"></i>Get in Touch
+            </a>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="container scroll-reveal">
+        <h2 class="section-title">🧠 About Me</h2>
+        <div class="about-content">
+            <div class="about-text">
+                <ul>
+                    <li><i class="fas fa-microscope" style="color: #64c8ff; margin-right: 0.8rem;"></i>Exploring low-level programming & system internals</li>
+                    <li><i class="fas fa-cogs" style="color: #c864ff; margin-right: 0.8rem;"></i>Learning reverse engineering & binary analysis fundamentals</li>
+                    <li><i class="fas fa-rocket" style="color: #64ffc8; margin-right: 0.8rem;"></i>Building foundational knowledge in systems programming</li>
+                    <li><i class="fas fa-book" style="color: #ffe064; margin-right: 0.8rem;"></i>Committed to continuous learning & improvement</li>
+                </ul>
+            </div>
+            <div class="about-icon-grid">
+                <div class="about-icon-item">
+                    <i class="fas fa-brain"></i>
+                    <h4>Low-Level Systems</h4>
+                </div>
+                <div class="about-icon-item">
+                    <i class="fas fa-lock-open"></i>
+                    <h4>Reverse Engineering</h4>
+                </div>
+                <div class="about-icon-item">
+                    <i class="fas fa-microchip"></i>
+                    <h4>Binary Analysis</h4>
+                </div>
+                <div class="about-icon-item">
+                    <i class="fas fa-laptop-code"></i>
+                    <h4>Systems Programming</h4>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Languages Section -->
+    <section id="languages" class="container scroll-reveal">
+        <h2 class="section-title">💻 Languages</h2>
+        <div class="tools-grid">
+            <div class="tool-item">
+                <i class="fab fa-c"></i>
+                <p>C</p>
+            </div>
+            <div class="tool-item">
+                <i class="fab fa-cuttlefish"></i>
+                <p>C++</p>
+            </div>
+            <div class="tool-item">
+                <i class="fas fa-microchip"></i>
+                <p>Assembly</p>
+            </div>
+            <div class="tool-item">
+                <i class="fab fa-windows"></i>
+                <p>Bash</p>
+            </div>
+            <div class="tool-item">
+                <i class="fab fa-ubuntu"></i>
+                <p>Linux</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tools Section -->
+    <section id="tools" class="container scroll-reveal">
+        <h2 class="section-title">🛠️ Tools I'm Learning</h2>
+        <div class="tools-grid">
+            <div class="tool-item">
+                <i class="fas fa-terminal"></i>
+                <p>IDA Pro</p>
+            </div>
+            <div class="tool-item">
+                <i class="fas fa-bug"></i>
+                <p>Debuggers (GDB, WinDbg)</p>
+            </div>
+            <div class="tool-item">
+                <i class="fas fa-filter"></i>
+                <p>Ghidra</p>
+            </div>
+            <div class="tool-item">
+                <i class="fas fa-search"></i>
+                <p>Binary Ninja</p>
+            </div>
+            <div class="tool-item">
+                <i class="fas fa-cube"></i>
+                <p>Hex Editors</p>
+            </div>
+            <div class="tool-item">
+                <i class="fas fa-network-wired"></i>
+                <p>Wireshark</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Currently Learning Section -->
+    <section id="learning" class="container scroll-reveal">
+        <h2 class="section-title">🎯 Currently Learning</h2>
+        <div class="skills-container">
+            <div class="skill-card">
+                <h3><i class="fas fa-memory" style="margin-right: 0.8rem;"></i>Memory Management</h3>
+                <div class="skill-items">
+                    <span class="skill-item">Pointers</span>
+                    <span class="skill-item">Heap</span>
+                    <span class="skill-item">Stack</span>
+                    <span class="skill-item">Virtual Memory</span>
+                </div>
+            </div>
+            <div class="skill-card">
+                <h3><i class="fas fa-processor" style="margin-right: 0.8rem;"></i>Assembly Language</h3>
+                <div class="skill-items">
+                    <span class="skill-item">x86</span>
+                    <span class="skill-item">x64</span>
+                    <span class="skill-item">ARM</span>
+                    <span class="skill-item">Opcodes</span>
+                </div>
+            </div>
+            <div class="skill-card">
+                <h3><i class="fas fa-bug" style="margin-right: 0.8rem;"></i>Debugging Techniques</h3>
+                <div class="skill-items">
+                    <span class="skill-item">Breakpoints</span>
+                    <span class="skill-item">GDB</span>
+                    <span class="skill-item">WinDbg</span>
+                    <span class="skill-item">Tracing</span>
+                </div>
+            </div>
+            <div class="skill-card">
+                <h3><i class="fas fa-file-binary" style="margin-right: 0.8rem;"></i>Binary Analysis</h3>
+                <div class="skill-items">
+                    <span class="skill-item">Disassembly</span>
+                    <span class="skill-item">Decompilation</span>
+                    <span class="skill-item">Malware</span>
+                    <span class="skill-item">PE/ELF</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Learning Resources Section -->
+    <section class="container scroll-reveal">
+        <h2 class="section-title">📚 Learning Resources</h2>
+        <div class="skills-container">
+            <div class="skill-card">
+                <h3><i class="fas fa-layer-group" style="margin-right: 0.8rem;"></i>System Architecture</h3>
+                <div class="skill-items">
+                    <span class="skill-item">CPU Architecture</span>
+                    <span class="skill-item">Memory Layout</span>
+                    <span class="skill-item">Calling Conventions</span>
+                    <span class="skill-item">Instruction Sets</span>
+                </div>
+            </div>
+            <div class="skill-card">
+                <h3><i class="fas fa-lock" style="margin-right: 0.8rem;"></i>Reverse Engineering</h3>
+                <div class="skill-items">
+                    <span class="skill-item">Static Analysis</span>
+                    <span class="skill-item">Dynamic Analysis</span>
+                    <span class="skill-item">Code Patterns</span>
+                    <span class="skill-item">Anti-Reversing</span>
+                </div>
+            </div>
+            <div class="skill-card">
+                <h3><i class="fas fa-microscope" style="margin-right: 0.8rem;"></i>Debugging & Analysis</h3>
+                <div class="skill-items">
+                    <span class="skill-item">Breakpoint Types</span>
+                    <span class="skill-item">Register Analysis</span>
+                    <span class="skill-item">Memory Inspection</span>
+                    <span class="skill-item">Execution Tracing</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- GitHub Stats Section -->
+    <section id="stats" class="container scroll-reveal">
+        <h2 class="section-title">📊 GitHub Stats</h2>
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>GitHub Profile</h3>
+                <p style="margin-top: 1rem; font-size: 0.9rem;">
+                    <i class="fab fa-github" style="margin-right: 0.5rem;"></i>
+                    Check out my repositories and contributions
+                </p>
+                <button class="btn btn-primary" style="margin-top: 1rem;" onclick="window.open('https://github.com', '_blank')">
+                    <i class="fab fa-github" style="margin-right: 0.5rem;"></i>Visit GitHub
+                </button>
+            </div>
+            <div class="stat-card">
+                <h3>Most Used Languages</h3>
+                <p style="margin-top: 1rem; color: #64c8ff;">
+                    <i class="fas fa-code" style="margin-right: 0.5rem;"></i>C, C++, Assembly
+                </p>
+                <p style="margin-top: 0.5rem; font-size: 0.85rem; color: #888;">
+                    Focus on systems programming and reverse engineering
+                </p>
+            </div>
+            <div class="stat-card">
+                <h3>Contributions</h3>
+                <p style="margin-top: 1rem; color: #64ffc8;">
+                    <i class="fas fa-code-branch" style="margin-right: 0.5rem;"></i>Active Learner
+                </p>
+                <p style="margin-top: 0.5rem; font-size: 0.85rem; color: #888;">
+                    Consistently improving skills & knowledge
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Connect Section -->
+    <section id="connect" class="container scroll-reveal">
+        <h2 class="section-title">🔗 Connect With Me</h2>
+        <p style="text-align: center; margin-bottom: 2rem; font-size: 1.1rem;">
+            Always learning, always improving. Let's connect! 🚀
+        </p>
+        <div class="connect-links">
+            <a href="https://github.com" target="_blank" class="social-link" title="GitHub">
+                <i class="fab fa-github"></i>
+            </a>
+            <a href="https://twitter.com" target="_blank" class="social-link" title="Twitter">
+                <i class="fab fa-twitter"></i>
+            </a>
+            <a href="https://linkedin.com" target="_blank" class="social-link" title="LinkedIn">
+                <i class="fab fa-linkedin"></i>
+            </a>
+            <a href="mailto:contact@example.com" class="social-link" title="Email">
+                <i class="fas fa-envelope"></i>
+            </a>
+            <a href="https://discord.com" target="_blank" class="social-link" title="Discord">
+                <i class="fab fa-discord"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="container">
+        <p>&copy; 2026 Zarif. All rights reserved. | Discipline is non-negotiable. 💪</p>
+    </footer>
+
+    <script>
+        // Smooth scroll behavior
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Scroll reveal animation
+        const revealElements = document.querySelectorAll('.scroll-reveal');
+
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        revealElements.forEach(el => observer.observe(el));
+
+        // Add some interactivity to skill items
+        const skillItems = document.querySelectorAll('.skill-item');
+        skillItems.forEach(item => {
+            item.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 100);
+            });
+        });
+
+        // Parallax effect on scroll
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const bg = document.querySelector('.background-animation');
+            if (bg) {
+                bg.style.transform = `translateY(${scrolled * 0.5}px)`;
+            }
+        });
+
+        // Random LED color effect on hover for tool items
+        const toolItems = document.querySelectorAll('.tool-item');
+        toolItems.forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                const colors = ['#64c8ff', '#c864ff', '#64ffc8', '#ffe064'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                this.style.boxShadow = `0 0 20px ${randomColor}`;
+            });
+        });
+
+        // Add loading animation
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '1';
+        });
+
+        document.body.style.opacity = '0';
+        document.body.style.transition = 'opacity 0.5s ease-in-out';
+    </script>
+</body>
+</html>
